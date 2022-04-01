@@ -21,6 +21,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
@@ -84,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         }
+
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -130,7 +132,6 @@ public class MainActivity extends AppCompatActivity {
                         break;
 
                 }
-
 
             }
 
@@ -185,6 +186,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 
+                byte[] dataByte;
+
+                checkBTconnectPermission(Manifest.permission.BLUETOOTH_CONNECT, BLUETOOTH_CONNECT_CODE);
+
+                bluetoothGatt.readCharacteristic(bluetoothGattCharacteristic);
+                dataByte = bluetoothGattCharacteristic.getValue();
+
+                String data = new String(dataByte);
+                System.out.println(data);
 
             }
         });
@@ -193,6 +203,14 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 
+                String data = "CLK\n";
+                byte[] dataByte = data.getBytes();
+
+                checkBTconnectPermission(Manifest.permission.BLUETOOTH_CONNECT, BLUETOOTH_CONNECT_CODE);
+
+                boolean returned = bluetoothGattCharacteristic.setValue(dataByte);
+                bluetoothGatt.writeCharacteristic(bluetoothGattCharacteristic);
+                System.out.println(returned);
 
             }
         });
