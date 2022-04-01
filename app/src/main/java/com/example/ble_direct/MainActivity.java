@@ -9,6 +9,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
@@ -57,8 +58,8 @@ public class MainActivity extends AppCompatActivity {
 
     //private UUID receiveUUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
     private UUID sendAndReceiveUUID = UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb");
-    //private UUID sendUUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
-    //private UUID sendUUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
+
+    private UUID characteristicConfigUUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
     //public BluetoothGattCharacteristic gattService = new BluetoothGattCharacteristic(receiveUUID,);
 
@@ -94,15 +95,34 @@ public class MainActivity extends AppCompatActivity {
                     Log.i(TAG, "Service UUID Found: " + gattService.getUuid().toString());
                 }
 
+                checkBTconnectPermission(Manifest.permission.BLUETOOTH_CONNECT, BLUETOOTH_CONNECT_CODE);
+
                 System.out.println(bluetoothGatt.getServices());
                 bluetoothGattService = gatt.getService(serviceUUID);
                 bluetoothGattCharacteristic = bluetoothGattService.getCharacteristic(sendAndReceiveUUID);
-                boolean returned = bluetoothGattCharacteristic.setValue("Test");
-                System.out.println(returned);
+                bluetoothGattCharacteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+
+                // set characteristic configuration
+                BluetoothGattDescriptor descriptor = bluetoothGattCharacteristic.getDescriptor(characteristicConfigUUID);
+                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                gatt.writeDescriptor(descriptor);
 
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
             }
+        }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic){
+            byte[] dataByte;
+
+            checkBTconnectPermission(Manifest.permission.BLUETOOTH_CONNECT, BLUETOOTH_CONNECT_CODE);
+
+            bluetoothGatt.readCharacteristic(bluetoothGattCharacteristic);
+            dataByte = bluetoothGattCharacteristic.getValue();
+
+            String data = new String(dataByte);
+            System.out.println(data);
         }
 
     };
