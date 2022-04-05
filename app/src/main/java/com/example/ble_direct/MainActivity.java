@@ -118,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
 
             checkBTconnectPermission(Manifest.permission.BLUETOOTH_CONNECT, BLUETOOTH_CONNECT_CODE);
 
+            bluetoothGatt.writeCharacteristic(bluetoothGattCharacteristic);
             bluetoothGatt.readCharacteristic(bluetoothGattCharacteristic);
             dataByte = bluetoothGattCharacteristic.getValue();
 
