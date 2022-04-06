@@ -12,6 +12,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -22,6 +23,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
@@ -52,6 +55,8 @@ public class MainActivity extends AppCompatActivity {
     public BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     public BluetoothDevice mBluetoothDevice = null;
 
+    public BluetoothSocket Socket;
+    public OutputStream OS;
 
     //private UUID serviceUUID = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9");
     private UUID serviceUUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb");
@@ -59,7 +64,8 @@ public class MainActivity extends AppCompatActivity {
     //private UUID receiveUUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
     private UUID sendAndReceiveUUID = UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb");
 
-    private UUID characteristicConfigUUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+    private UUID characteristicConfigUUID = UUID.fromString("00002901-0000-1000-8000-00805f9b34fb");
+    private UUID UserConfigUUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
     //public BluetoothGattCharacteristic gattService = new BluetoothGattCharacteristic(receiveUUID,);
 
@@ -84,7 +90,6 @@ public class MainActivity extends AppCompatActivity {
                 //Disconnected to GATT server
                 connectionState = STATE_DISCONNECTED;
 
-
         }
 
         @Override
@@ -100,13 +105,24 @@ public class MainActivity extends AppCompatActivity {
                 System.out.println(bluetoothGatt.getServices());
                 bluetoothGattService = gatt.getService(serviceUUID);
                 bluetoothGattCharacteristic = bluetoothGattService.getCharacteristic(sendAndReceiveUUID);
-                bluetoothGattCharacteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+                bluetoothGattCharacteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+                bluetoothGattCharacteristic.setWriteType(BluetoothGattCharacteristic.PROPERTY_READ);
 
+                bluetoothGatt.setCharacteristicNotification(bluetoothGattCharacteristic, true);
+                /*
                 // set characteristic configuration
-                BluetoothGattDescriptor descriptor = bluetoothGattCharacteristic.getDescriptor(characteristicConfigUUID);
-                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                gatt.writeDescriptor(descriptor);
+                BluetoothGattDescriptor descriptor1 = bluetoothGattCharacteristic.getDescriptor(characteristicConfigUUID);
+                descriptor1.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                descriptor1.setValue(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
+                gatt.writeDescriptor(descriptor1);
 
+                BluetoothGattDescriptor descriptor2 = bluetoothGattCharacteristic.getDescriptor(UserConfigUUID);
+                descriptor2.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                descriptor2.setValue(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
+                gatt.writeDescriptor(descriptor2);
+
+
+                 */
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
             }
@@ -114,20 +130,23 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic){
+
+            Log.d(TAG, "onCharacteristicChanged");
+
             byte[] dataByte;
 
             checkBTconnectPermission(Manifest.permission.BLUETOOTH_CONNECT, BLUETOOTH_CONNECT_CODE);
 
-            bluetoothGatt.writeCharacteristic(bluetoothGattCharacteristic);
-            bluetoothGatt.readCharacteristic(bluetoothGattCharacteristic);
-            dataByte = bluetoothGattCharacteristic.getValue();
+            boolean returned = gatt.readCharacteristic(characteristic);
+            dataByte = characteristic.getValue();
 
             String data = new String(dataByte);
+            System.out.println(returned);
             System.out.println(data);
         }
 
-    };
 
+    };
 
     private final BroadcastReceiver mBroadcastReceiver1 = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -153,22 +172,18 @@ public class MainActivity extends AppCompatActivity {
                         break;
 
                 }
-
             }
-
         }
     };
-
 
     @Override
     protected void onDestroy() {
         Log.d(TAG, "OnDestroy called");
         super.onDestroy();
-        unregisterReceiver(mBroadcastReceiver1);
+        //unregisterReceiver(mBroadcastReceiver1);
         //unregisterReceiver(mBroadcastReceiver3);
 
     }
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -180,15 +195,9 @@ public class MainActivity extends AppCompatActivity {
         Button btnGetData = (Button) findViewById(R.id.btnGetData);
         Button btnSenData = (Button) findViewById(R.id.btnSendData);
 
-
-        //uuidReceive =  UUID.fromString("6e400002‑b5a3‑f393‑e0a9‑e50e24dcca9e");
-
-
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
 
             Log.d(TAG, "DEVICE DOES NOT SUPPORT BLE");
-
-
         }
 
 
@@ -198,7 +207,6 @@ public class MainActivity extends AppCompatActivity {
 
                 Log.d(TAG, "OnClick: Enabling/disabling bluetooth");
                 enableDisableBT();
-
 
             }
         });
@@ -212,6 +220,7 @@ public class MainActivity extends AppCompatActivity {
                 checkBTconnectPermission(Manifest.permission.BLUETOOTH_CONNECT, BLUETOOTH_CONNECT_CODE);
 
                 bluetoothGatt.readCharacteristic(bluetoothGattCharacteristic);
+
                 dataByte = bluetoothGattCharacteristic.getValue();
 
                 String data = new String(dataByte);
@@ -235,7 +244,6 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-
 
         btnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
